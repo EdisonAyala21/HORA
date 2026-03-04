@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reloj por Voz</title>
+    <!-- PWA Configuración para funcionamiento 100% offline -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <style>
+        /* Estilos base */
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0f172a;
+            /* Fondo oscuro moderno */
+            font-family: system-ui, -apple-system, sans-serif;
+            /* Fuentes del sistema para offline seguro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            /* Previene el doble tap para zoom en móviles */
+            touch-action: manipulation;
+        }
+
+        /* Diseño del botón gigante */
+        #timeBtn {
+            width: 80vw;
+            height: 80vw;
+            max-width: 350px;
+            max-height: 350px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 700;
+            box-shadow: 0 20px 50px rgba(139, 92, 246, 0.4), inset 0 0 0 4px rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            /* Evita que se seleccione como texto en el celular */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Efecto al presionar (Tap) */
+        #timeBtn:active {
+            transform: scale(0.92);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.5), inset 0 0 0 6px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        }
+
+        /* Icono SVG para que sea más visual */
+        .icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Animación cuando está hablando */
+        .speaking {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 40px rgba(139, 92, 246, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Botón principal -->
+    <button id="timeBtn" aria-label="Decir la hora">
+        <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+        <span>TOCAR<br>HORA</span>
+    </button>
+
+    <script>
+        const btn = document.getElementById('timeBtn');
+        const synth = window.speechSynthesis;
+
+        // Cargar voces en dispositivos donde es asíncrono
+        let voices = [];
+        const updateVoices = () => {
+            voices = synth.getVoices();
+        };
+        updateVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = updateVoices;
+        }
+
+        function tellTime() {
+            // Cancelar si ya está hablando para no superponer
+            if (synth.speaking) {
+                synth.cancel();
+            }
+
+            // Efecto visual de que está "hablando"
+            btn.classList.add('speaking');
+
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+
+            // Determinar si es mañana, tarde o noche para hablar más natural
+            let period = "de la mañana";
+            if (hours >= 12 && hours < 20) {
+                period = "de la tarde";
+            } else if (hours >= 20 || hours < 6) {
+                period = "de la noche";
+            }
+
+            // Convertir a formato 12 horas
+            let displayHour = hours % 12;
+            if (displayHour === 0) displayHour = 12;
+
+            // Construir el texto a decir
+            let text = `Son las ${displayHour} y ${minutes}`;
+
+            // Reglas gramaticales en español para la hora
+            if (minutes === 0) {
+                text = `Son las ${displayHour} en punto`;
+            } else if (minutes === 1) {
+                text = `Son las ${displayHour} y un minuto`;
+            } else {
+                text = `Son las ${displayHour} y ${minutes} minutos`;
+            }
+
+            // Corrección específica para "La una"
+            if (hours === 1 || hours === 13) {
+                if (minutes === 0) text = `Es la una en punto`;
+                else if (minutes === 1) text = `Es la una y un minuto`;
+                else text = `Es la una y ${minutes} minutos`;
+            }
+
+            // Agregar el periodo del día (mañana, tarde, noche)
+            text += ` ${period}`;
+
+            // Configurar la voz
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES'; // Preferencia Español (España o el dispositivo elige su local)
+            utterance.rate = 0.95; // Velocidad un poquito más lenta para mayor claridad
+            utterance.pitch = 1.0;
+
+            // Intentar usar una voz en español del dispositivo
+            let esVoice = voices.find(v => v.lang.startsWith('es-MX') || v.lang.startsWith('es-LA') || v.lang.startsWith('es-US'));
+            if (!esVoice) {
+                esVoice = voices.find(v => v.lang.startsWith('es')); // caida al primer español disponible
+            }
+            if (esVoice) {
+                utterance.voice = esVoice;
+            }
+
+            // Remover la animación cuando termine
+            utterance.onend = () => {
+                btn.classList.remove('speaking');
+            };
+
+            utterance.onerror = () => {
+                btn.classList.remove('speaking');
+            }
+
+            // Hablar!
+            synth.speak(utterance);
+
+            // Respaldo de seguridad por si falla onend
+            setTimeout(() => {
+                btn.classList.remove('speaking');
+            }, 6000);
+        }
+
+        // Manejar eventos táctiles (prioridad en celular)
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Evita que se dispare el click después del touch
+            tellTime();
+        }, { passive: false });
+
+        // Manejar click (por si se abre en un navegador de PC o el touch falla)
+        btn.addEventListener('click', () => {
+            tellTime();
+        });
+
+        // Registrar Service Worker para asegurar que funcione totalmente sin internet
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Modo Sin Internet (Offline) activado con éxito'))
+                    .catch(err => console.log('Error al activar el modo offline:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

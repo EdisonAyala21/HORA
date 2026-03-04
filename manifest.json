@@ -1,0 +1,25 @@
+{
+  "name": "Reloj de Voz",
+  "short_name": "Reloj Voz",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ]
+}
